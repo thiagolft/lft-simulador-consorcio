@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Building2,
   ShieldCheck,
+  FileDown,
 } from 'lucide-react';
 import { useAnimatedNumber } from '../hooks/useAnimatedNumber';
 import {
@@ -32,6 +33,7 @@ interface ResultsBoxProps {
   onChangeMes?: (mes: number) => void;
   premissasAbertas: boolean;
   onTogglePremissas: () => void;
+  onOpenPdfModal?: () => void;
 }
 
 export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
@@ -44,6 +46,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
     onChangeMes,
     premissasAbertas,
     onTogglePremissas,
+    onOpenPdfModal,
   }) => {
     // Estados Régua 1 (Venda)
     const [nominalAberto, setNominalAberto] = useState(false);
@@ -878,6 +881,23 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 )}
               </div>
             </>
+          )}
+
+          {/* Barra de exportação de Proposta em PDF para o Cliente */}
+          {onOpenPdfModal && (
+            <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs text-gray-400 text-center sm:text-left">
+                Simulação pronta? Gere o documento estruturado para enviar ao cliente:
+              </div>
+              <button
+                type="button"
+                onClick={onOpenPdfModal}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white gold-pill shadow-md hover:brightness-110 active:scale-95 transition-all"
+              >
+                <FileDown className="w-4 h-4" />
+                <span>Gerar Proposta em PDF</span>
+              </button>
+            </div>
           )}
 
           {/* Ícone de calculadora centralizado ao pé da caixa (abre/fecha Premissas) */}

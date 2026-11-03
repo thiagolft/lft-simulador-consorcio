@@ -18,6 +18,7 @@ import {
   IndicadoresModal,
   AjudaModal,
 } from './components/ModalsAndFooter';
+import { PdfExportModal } from './components/PdfExportModal';
 
 export function App() {
   const [reguaAtiva, setReguaAtiva] = useState<TipoRegua>('venda');
@@ -27,6 +28,7 @@ export function App() {
   const [premissasAbertas, setPremissasAbertas] = useState(false);
   const [indicadoresAberto, setIndicadoresAberto] = useState(false);
   const [ajudaAberta, setAjudaAberta] = useState(false);
+  const [pdfModalAberto, setPdfModalAberto] = useState(false);
 
   const mesEfetivo = Math.min(mes, premissas.prazo);
 
@@ -102,6 +104,7 @@ export function App() {
           <Header
             onOpenIndicadores={() => setIndicadoresAberto(true)}
             onOpenAjuda={() => setAjudaAberta(true)}
+            onOpenPdfModal={() => setPdfModalAberto(true)}
           />
 
           {/* Conteúdo Principal responsivo (Mobile, iPad Portrait/Landscape e Desktop) */}
@@ -153,6 +156,7 @@ export function App() {
               onChangeMes={setMes}
               premissasAbertas={premissasAbertas}
               onTogglePremissas={() => setPremissasAbertas((prev) => !prev)}
+              onOpenPdfModal={() => setPdfModalAberto(true)}
             />
 
             {/* Painel recolhível de Premissas */}
@@ -177,6 +181,16 @@ export function App() {
         <AjudaModal
           aberto={ajudaAberta}
           onClose={() => setAjudaAberta(false)}
+        />
+
+        <PdfExportModal
+          aberto={pdfModalAberto}
+          onClose={() => setPdfModalAberto(false)}
+          reguaAtiva={reguaAtiva}
+          mesSelecionado={mesEfetivo}
+          numeroCotas={numeroCotas}
+          premissas={premissas}
+          resultadoAtual={resultado}
         />
       </div>
     </DarkGradientBg>

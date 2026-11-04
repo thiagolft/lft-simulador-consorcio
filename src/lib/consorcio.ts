@@ -16,7 +16,7 @@ export interface PremissasConsorcio {
   reajusteAnual: number;
   /** Percentual da parcela paga até a contemplação em decimal (padrão: 0.50 = 50%) */
   percentualMeiaParcela: number;
-  /** Ágio de venda sobre o crédito corrigido em decimal (padrão: 0.20 = 20%, editável de 10% a 40%) */
+  /** Ágio de venda sobre o crédito corrigido em decimal (padrão: 0.25 = 25%, editável de 10% a 40%) */
   agioVenda: number;
   /** Rentabilidade anual em decimal (padrão: 0.1431 = 14,31% a.a., equivalente a 1,1925% a.m. dividido por 12) */
   rentabilidadeAnual: number;
@@ -140,7 +140,7 @@ export const PREMISSAS_PADRAO: PremissasConsorcio = {
   taxaTotal: 0.23,
   reajusteAnual: 0.05,
   percentualMeiaParcela: 0.5,
-  agioVenda: 0.2,
+  agioVenda: 0.25, // 25,0% padrão em todo o sistema
   rentabilidadeAnual: 0.1431, // 14,31% a.a. -> dividido por 12 = 1,1925% a.m. (0.011925)
   taxaValorizacaoImovelAnual: 0.089,
   percentualLanceEmbutido: 0.3,

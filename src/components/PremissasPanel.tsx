@@ -201,7 +201,10 @@ export const PremissasPanel: React.FC<PremissasPanelProps> = ({
                   Ágio de venda (10% a 40%)
                 </label>
                 <span className="text-xs font-bold text-[#d4a52a]">
-                  {Math.round(premissas.agioVenda * 100)}%
+                  {(premissas.agioVenda * 100).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}%
                 </span>
               </div>
               <input
@@ -209,18 +212,17 @@ export const PremissasPanel: React.FC<PremissasPanelProps> = ({
                 type="range"
                 min={10}
                 max={40}
-                step={1}
-                value={Math.round(premissas.agioVenda * 100)}
+                step={0.5}
+                value={Math.round(premissas.agioVenda * 1000) / 10}
                 onChange={(e) => {
-                  const pct = Math.max(10, Math.min(40, Number(e.target.value) || 20));
+                  const pct = Math.max(10, Math.min(40, Number(e.target.value) || 25));
                   atualizarCampo('agioVenda', pct / 100);
                 }}
                 className="w-full accent-[#d4a52a] h-2 bg-gray-700 rounded-lg cursor-pointer mt-2"
               />
               <div className="flex justify-between text-[10px] text-gray-400">
                 <span>10%</span>
-                <span>20%</span>
-                <span>30%</span>
+                <span>25,0%</span>
                 <span>40%</span>
               </div>
             </div>

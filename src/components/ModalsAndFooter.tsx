@@ -232,7 +232,7 @@ export const AjudaModal: React.FC<AjudaModalProps> = ({ aberto, onClose }) => {
           <div className="p-3.5 rounded-xl bg-black/25 border border-white/10 space-y-2.5">
             <div>
               <strong className="text-[#f3c653]">1. Venda Contemplada (Alavancagem Financeira):</strong>{' '}
-              Projeta o ágio de comercialização da carta contemplada no mercado secundário (padrão 20% sobre o crédito corrigido), descontando as meias parcelas pagas até o mês escolhido.
+              Projeta o ágio de comercialização da carta contemplada no mercado secundário (padrão 25,0% sobre o crédito corrigido), descontando as meias parcelas pagas até o mês escolhido.
             </div>
             <div>
               <strong className="text-[#f3c653]">2. Alavancagem Patrimonial (Imóveis &amp; Renda Passiva):</strong>{' '}

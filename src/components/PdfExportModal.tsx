@@ -321,10 +321,10 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({
                 />
                 <div>
                   <div className="text-xs font-bold text-white">
-                    Enxuto (1 Página Executiva)
+                    Resumido (1 Página Executiva)
                   </div>
                   <div className="text-[11px] text-gray-400 leading-snug mt-0.5">
-                    Foca nos resultados do mês selecionado e na tabela de evolução cronológica.
+                    Gera rigorosamente 1 única página com os resultados e a tabela de evolução.
                   </div>
                 </div>
               </button>

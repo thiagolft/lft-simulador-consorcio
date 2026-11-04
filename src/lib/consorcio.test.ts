@@ -18,15 +18,16 @@ import {
 } from './consorcio';
 
 describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
-  describe('Régua 1: Teste de calibração obrigatório (Mês 1, Crédito R$ 500.000)', () => {
-    it('deve reproduzir exatamente os valores de referência no mês 1 com premissas padrão', () => {
+  describe('Régua 1: Teste de calibração (Mês 1, Crédito R$ 500.000, Ágio padrão 25,0%)', () => {
+    it('deve reproduzir exatamente os valores de referência no mês 1 com premissas padrão (ágio 25,0%)', () => {
       const resultado = simularMes(1, PREMISSAS_PADRAO);
 
+      expect(PREMISSAS_PADRAO.agioVenda).toBe(0.25);
       expect(resultado.creditoCorrigido).toBe(500000.0);
       expect(resultado.totalInvestido).toBe(1397.73);
-      expect(resultado.valorVenda).toBe(100000.0);
-      expect(resultado.lucro).toBe(98602.27);
-      expect(resultado.rentabilidade).toBe(7054.46);
+      expect(resultado.valorVenda).toBe(125000.0);
+      expect(resultado.lucro).toBe(123602.27);
+      expect(resultado.rentabilidade).toBe(8843.07);
     });
   });
 
@@ -142,11 +143,11 @@ describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
   });
 
   describe('Seletores Nominal e CET', () => {
-    it('deve retornar detalhamento nominal consistente', () => {
+    it('deve retornar detalhamento nominal consistente (ágio 25,0%)', () => {
       const nom = calcularDetalhamentoNominal(15, PREMISSAS_PADRAO);
       expect(nom.numeroReajustes).toBe(1);
       expect(nom.creditoCorrigido).toBe(525000);
-      expect(nom.valorVendaNominal).toBe(105000);
+      expect(nom.valorVendaNominal).toBe(131250);
     });
 
     it('deve retornar convergiu = false ("n/d") para M muito baixo (M = 1)', () => {

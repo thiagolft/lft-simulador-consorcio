@@ -73,45 +73,56 @@ function desenharCabecalhoPagina(
   logoData: { dataUrl: string; width: number; height: number } | null,
   opcoes: OpcoesExportacaoPdf,
   dataHoraStr: string,
-  subtituloPagina: string
+  subtituloPagina: string,
+  compacto = false
 ) {
   const pageWidth = doc.internal.pageSize.getWidth();
+  const headerH = compacto ? 30 : 33;
 
   // Faixa superior escura (identidade visual LFT)
   doc.setFillColor(15, 16, 22);
-  doc.rect(0, 0, pageWidth, 34, 'F');
+  doc.rect(0, 0, pageWidth, headerH, 'F');
 
   // Filete dourado inferior no cabeçalho
   doc.setFillColor(212, 165, 42);
-  doc.rect(0, 34, pageWidth, 1.2, 'F');
+  doc.rect(0, headerH, pageWidth, 1.1, 'F');
 
   // Logo LFT à esquerda
   if (logoData) {
-    const targetH = 17;
+    const targetH = compacto ? 15 : 16.5;
     const targetW = (logoData.width / logoData.height) * targetH;
-    doc.addImage(logoData.dataUrl, 'PNG', 14, 8.5, targetW, targetH);
+    doc.addImage(
+      logoData.dataUrl,
+      'PNG',
+      14,
+      (headerH - targetH) / 2,
+      targetW,
+      targetH
+    );
   } else {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setTextColor(255, 255, 255);
-    doc.text('LFT CONSORCIOS', 14, 19);
+    doc.text('LFT CONSÓRCIOS', 14, headerH / 2 + 2);
   }
 
   // Títulos à direita
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11.5);
+  doc.setFontSize(compacto ? 10.5 : 11);
   doc.setTextColor(243, 198, 83);
   doc.text(
     'ESTUDO PERSONALIZADO DE ALAVANCAGEM FINANCEIRA',
     pageWidth - 14,
-    13,
+    compacto ? 11.5 : 12.5,
     { align: 'right' }
   );
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(compacto ? 8 : 8.3);
   doc.setTextColor(210, 214, 224);
-  doc.text(subtituloPagina, pageWidth - 14, 19, { align: 'right' });
+  doc.text(subtituloPagina, pageWidth - 14, compacto ? 17.2 : 18.5, {
+    align: 'right',
+  });
 
   const infoLinha3: string[] = [`Emissão: ${dataHoraStr}`];
   if (opcoes.nomeCliente.trim()) {
@@ -124,9 +135,9 @@ function desenharCabecalhoPagina(
     infoLinha3.push(consultorStr);
   }
 
-  doc.setFontSize(7.8);
+  doc.setFontSize(7.4);
   doc.setTextColor(170, 175, 190);
-  doc.text(infoLinha3.join('   |   '), pageWidth - 14, 26.5, {
+  doc.text(infoLinha3.join('   |   '), pageWidth - 14, compacto ? 23.5 : 25.5, {
     align: 'right',
   });
 }
@@ -136,38 +147,61 @@ function desenharRodapePaginas(doc: jsPDF, opcoes: OpcoesExportacaoPdf) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
+  const textoConsultor = [
+    opcoes.nomeConsultor.trim()
+      ? `Especialista: ${opcoes.nomeConsultor.trim()}`
+      : '',
+    opcoes.contatoConsultor.trim()
+      ? `Contato: ${opcoes.contatoConsultor.trim()}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('   •   ');
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
+
+    // Filete dourado separador do rodapé
     doc.setDrawColor(212, 165, 42);
     doc.setLineWidth(0.3);
-    doc.line(14, pageHeight - 13, pageWidth - 14, pageHeight - 13);
+    doc.line(14, pageHeight - 18.5, pageWidth - 14, pageHeight - 18.5);
 
+    // Linha 1 do rodapé: LFT CONSÓRCIOS à esquerda e Página X de Y à direita
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(90, 95, 110);
+    doc.setFontSize(7.4);
+    doc.setTextColor(70, 75, 90);
     doc.text(
       'LFT CONSÓRCIOS — Planejamento & Alavancagem Financeira',
       14,
-      pageHeight - 8
+      pageHeight - 14.2
     );
 
-    if (opcoes.nomeConsultor.trim() || opcoes.contatoConsultor.trim()) {
-      const textoMeio = [
-        opcoes.nomeConsultor.trim(),
-        opcoes.contatoConsultor.trim(),
-      ]
-        .filter(Boolean)
-        .join(' • ');
-      doc.setFont('helvetica', 'normal');
-      doc.text(textoMeio, pageWidth / 2, pageHeight - 8, { align: 'center' });
-    }
-
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.4);
+    doc.setTextColor(90, 95, 110);
     doc.text(
       `Página ${i} de ${totalPages}`,
       pageWidth - 14,
-      pageHeight - 8,
+      pageHeight - 14.2,
       { align: 'right' }
+    );
+
+    // Linha 2 do rodapé: Dados do consultor/especialista abaixo do título principal (sem colidir)
+    if (textoConsultor) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.1);
+      doc.setTextColor(95, 100, 115);
+      doc.text(textoConsultor, 14, pageHeight - 10.2);
+    }
+
+    // Linha 3 do rodapé: Aviso ilustrativo abaixo de tudo
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(6.9);
+    doc.setTextColor(125, 130, 145);
+    doc.text(
+      'Imagem meramente ilustrativa.',
+      14,
+      textoConsultor ? pageHeight - 6.3 : pageHeight - 10.2
     );
   }
 }
@@ -193,61 +227,69 @@ function desenharCardMetrica(
     doc.setDrawColor(222, 226, 234);
     doc.setLineWidth(0.3);
   }
-  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'FD');
+  doc.roundedRect(x, y, w, h, 2.2, 2.2, 'FD');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(100, 105, 120);
-  doc.text(rotulo, x + w / 2, y + 6, { align: 'center' });
+  doc.text(rotulo, x + w / 2, y + 5.2, { align: 'center' });
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
+  doc.setFontSize(10);
   doc.setTextColor(corValor[0], corValor[1], corValor[2]);
-  doc.text(valor, x + w / 2, y + (subvalor ? 13 : 14.5), { align: 'center' });
+  doc.text(valor, x + w / 2, y + (subvalor ? 11.4 : 13), { align: 'center' });
 
   if (subvalor) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
+    doc.setFontSize(6.5);
     doc.setTextColor(115, 120, 135);
-    doc.text(subvalor, x + w / 2, y + 18.5, { align: 'center' });
+    doc.text(subvalor, x + w / 2, y + 16.2, { align: 'center' });
   }
 }
 
+/**
+ * Desenha o título da seção com o subtítulo ABAIXO do título principal,
+ * evitando qualquer sobreposição horizontal.
+ */
 function desenharTituloSecao(
   doc: jsPDF,
   y: number,
   numero: string,
   titulo: string,
-  subtitulo?: string
+  subtitulo?: string,
+  compacto = false
 ): number {
   const pageWidth = doc.internal.pageSize.getWidth();
+  const badgeH = subtitulo ? (compacto ? 8.2 : 9) : 6.2;
 
   // Badge dourado com número
   doc.setFillColor(184, 137, 36);
-  doc.roundedRect(14, y, 6.5, 6.5, 1.2, 1.2, 'F');
+  doc.roundedRect(14, y, 6.2, badgeH, 1.2, 1.2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.2);
   doc.setTextColor(255, 255, 255);
-  doc.text(numero, 17.25, y + 4.6, { align: 'center' });
+  doc.text(numero, 17.1, y + badgeH / 2 + 1.2, { align: 'center' });
 
-  // Título da seção
+  // Linha 1: Título da seção em caixa alta
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(compacto ? 9.2 : 9.6);
   doc.setTextColor(22, 25, 35);
-  doc.text(titulo.toUpperCase(), 23, y + 4.7);
+  doc.text(titulo.toUpperCase(), 22.5, y + 3.8);
 
+  // Linha 2: Subtítulo posicionado ABAIXO do título (sem risco de colidir)
   if (subtitulo) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(110, 115, 130);
-    doc.text(subtitulo, pageWidth - 14, y + 4.7, { align: 'right' });
+    doc.setFontSize(compacto ? 7.2 : 7.5);
+    doc.setTextColor(105, 110, 125);
+    doc.text(subtitulo, 22.5, y + (compacto ? 7.4 : 8.0));
   }
 
+  const lineY = y + badgeH + 1.2;
   doc.setDrawColor(225, 228, 235);
   doc.setLineWidth(0.3);
-  doc.line(14, y + 8.2, pageWidth - 14, y + 8.2);
+  doc.line(14, lineY, pageWidth - 14, lineY);
 
-  return y + 11.5;
+  return lineY + (compacto ? 2.6 : 3.2);
 }
 
 export async function gerarPropostaPdf(
@@ -280,8 +322,11 @@ export async function gerarPropostaPdf(
     modoRelatorio,
   } = opcoes;
 
+  const isResumido1Pagina = modoRelatorio === 'regua_atual';
+
   const rentAnualPct = (premissas.rentabilidadeAnual ?? 0.1431) * 100;
   const rentMensalPct = obterRentabilidadeMensal(premissas) * 100;
+  const agioPctFmt = formatarPercentual(premissas.agioVenda * 100, 1);
 
   const patrimonialCalc = calcularAlavancagemPatrimonial(
     mesSelecionado,
@@ -310,51 +355,53 @@ export async function gerarPropostaPdf(
     logoData,
     opcoes,
     dataHoraStr,
-    `Foco Principal: ${NOMES_REGUA[reguaAtiva]}`
+    `Foco Principal: ${NOMES_REGUA[reguaAtiva]}`,
+    true
   );
 
-  let y = 40;
+  let y = 34.5;
 
   // Bloco de identificação do cliente / consultor (se preenchido)
   if (opcoes.nomeCliente.trim() || opcoes.observacoes.trim()) {
     doc.setFillColor(250, 248, 242);
     doc.setDrawColor(212, 165, 42);
     doc.setLineWidth(0.35);
-    const boxH = opcoes.observacoes.trim() ? 16 : 10;
+    const temObs = Boolean(opcoes.observacoes.trim());
+    const boxH = temObs ? 12 : 8;
     doc.roundedRect(14, y, contentWidth, boxH, 2, 2, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.2);
+    doc.setFontSize(7.8);
     doc.setTextColor(138, 100, 20);
     const saudacao = opcoes.nomeCliente.trim()
       ? `PROPOSTA PREPARADA PARA: ${opcoes.nomeCliente.trim().toUpperCase()}`
       : 'OBSERVAÇÕES DO ESTUDO PERSONALIZADO';
-    doc.text(saudacao, 18, y + 6);
+    doc.text(saudacao, 18, y + 5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
+    doc.setFontSize(7.4);
     doc.setTextColor(70, 75, 90);
     doc.text(
       `Simulação na Contemplação do ${mesSelecionado}º Mês (${numeroCotas} ${
         numeroCotas === 1 ? 'Cota' : 'Cotas'
       })`,
       pageWidth - 18,
-      y + 6,
+      y + 5,
       { align: 'right' }
     );
 
-    if (opcoes.observacoes.trim()) {
+    if (temObs) {
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7.5);
+      doc.setFontSize(7.1);
       doc.setTextColor(80, 85, 100);
       const notaCortada =
         opcoes.observacoes.trim().length > 125
           ? opcoes.observacoes.trim().slice(0, 122) + '...'
           : opcoes.observacoes.trim();
-      doc.text(`Nota: "${notaCortada}"`, 18, y + 12.2);
+      doc.text(`Nota: "${notaCortada}"`, 18, y + 9.8);
     }
 
-    y += boxH + 4.5;
+    y += boxH + 2.8;
   }
 
   // -------------------------------------------------------------------------
@@ -365,19 +412,22 @@ export async function gerarPropostaPdf(
     y,
     '1',
     'Parâmetros da Cota & Premissas do Grupo',
-    `Prazo Total: ${premissas.prazo} meses | Reajuste Anual: ${formatarPercentual(
+    `Prazo Total: ${premissas.prazo} meses   •   Reajuste Anual: ${formatarPercentual(
       premissas.reajusteAnual * 100,
       1
-    )} a.a.`
+    )} a.a.   •   Ágio de Venda: ${agioPctFmt}`,
+    true
   );
 
   const cardW4 = (contentWidth - 9) / 4;
+  const cardH1 = 17.5;
+
   desenharCardMetrica(
     doc,
     14,
     y,
     cardW4,
-    21,
+    cardH1,
     'Crédito Inicial Contratado',
     formatarMoeda(premissas.creditoInicial),
     numeroCotas > 1
@@ -392,7 +442,7 @@ export async function gerarPropostaPdf(
     14 + (cardW4 + 3) * 1,
     y,
     cardW4,
-    21,
+    cardH1,
     'Mês de Contemplação Simulado',
     `${mesSelecionado}º Mês`,
     `${res.nominal.numeroReajustes} ${
@@ -405,7 +455,7 @@ export async function gerarPropostaPdf(
     14 + (cardW4 + 3) * 2,
     y,
     cardW4,
-    21,
+    cardH1,
     `Meia Parcela (${Math.round(premissas.percentualMeiaParcela * 100)}%)`,
     formatarMoeda(res.meiaParcela),
     `Parcela cheia no mês: ${formatarMoeda(res.parcelaCheia)}`
@@ -415,16 +465,16 @@ export async function gerarPropostaPdf(
     14 + (cardW4 + 3) * 3,
     y,
     cardW4,
-    21,
+    cardH1,
     'Taxas & Indexadores',
     `Rentab.: ${formatarPercentual(rentAnualPct, 2)} a.a.`,
     `Taxa Adm.: ${formatarPercentual(
       premissas.taxaTotal * 100,
       1
-    )} | Ágio: ${formatarPercentual(premissas.agioVenda * 100, 0)}`
+    )} | Ágio: ${agioPctFmt}`
   );
 
-  y += 26;
+  y += cardH1 + 3.2;
 
   // -------------------------------------------------------------------------
   // SEÇÃO 2: DESTAQUE DA ESTRATÉGIA PRINCIPAL SELECIONADA
@@ -434,20 +484,23 @@ export async function gerarPropostaPdf(
     y,
     '2',
     `Cenário em Destaque: ${NOMES_REGUA[reguaAtiva]}`,
-    `Resultados projetados para contemplação no ${mesSelecionado}º mês`
+    `Resultados projetados para contemplação no ${mesSelecionado}º mês`,
+    true
   );
+
+  const destaqueBoxH = 27;
 
   // Quadro escuro premium imitando a caixa RESULTADOS do simulador
   doc.setFillColor(20, 21, 28);
   doc.setDrawColor(196, 148, 35);
   doc.setLineWidth(0.6);
-  doc.roundedRect(14, y, contentWidth, 32, 3, 3, 'FD');
+  doc.roundedRect(14, y, contentWidth, destaqueBoxH, 3, 3, 'FD');
 
   let p1Label = 'Crédito Corrigido';
   let p1Val = formatarMoeda(res.creditoCorrigido);
   let p2Label = 'Total Investido';
   let p2Val = formatarMoeda(res.totalInvestido);
-  let p3Label = 'Valor da Venda (Ágio)';
+  let p3Label = `Valor da Venda (${agioPctFmt})`;
   let p3Val = formatarMoeda(res.valorVenda);
   let p4Label = 'Lucro Líquido';
   let p4Val = formatarMoeda(res.lucro);
@@ -538,6 +591,7 @@ export async function gerarPropostaPdf(
   }
 
   const pillW = (contentWidth - 18) / 4;
+  const pillH = 10.5;
   const pills = [
     { label: p1Label, val: p1Val },
     { label: p2Label, val: p2Val },
@@ -548,28 +602,32 @@ export async function gerarPropostaPdf(
   pills.forEach((p, idx) => {
     const px = 17 + idx * (pillW + 4);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.3);
+    doc.setFontSize(7.1);
     doc.setTextColor(210, 214, 224);
-    doc.text(p.label, px + pillW / 2, y + 6.5, { align: 'center' });
+    doc.text(p.label, px + pillW / 2, y + 5.8, { align: 'center' });
 
     // Pílula dourada
     doc.setFillColor(122, 90, 18);
     doc.setDrawColor(212, 165, 42);
     doc.setLineWidth(0.4);
-    doc.roundedRect(px, y + 9, pillW, 12, 3, 3, 'FD');
+    doc.roundedRect(px, y + 7.8, pillW, pillH, 2.5, 2.5, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.8);
+    doc.setFontSize(9.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(p.val, px + pillW / 2, y + 16.5, { align: 'center' });
+    doc.text(p.val, px + pillW / 2, y + 7.8 + pillH / 2 + 1.4, {
+      align: 'center',
+    });
   });
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.6);
+  doc.setFontSize(7.3);
   doc.setTextColor(243, 198, 83);
-  doc.text(resumoDestaque, pageWidth / 2, y + 27.8, { align: 'center' });
+  doc.text(resumoDestaque, pageWidth / 2, y + destaqueBoxH - 3.2, {
+    align: 'center',
+  });
 
-  y += 37;
+  y += destaqueBoxH + 3.2;
 
   // -------------------------------------------------------------------------
   // SEÇÃO 3: PANORAMA COMPLETO DAS 4 VERTENTES FINANCEIRAS NO MÊS ESCOLHIDO
@@ -578,36 +636,34 @@ export async function gerarPropostaPdf(
     doc,
     y,
     '3',
-    modoRelatorio === 'completo'
-      ? `Análise Comparativa das 4 Estratégias no ${mesSelecionado}º Mês`
-      : `Detalhamento Técnico da Operação no ${mesSelecionado}º Mês`,
-    'Valores nominais projetados conforme parâmetros configurados'
+    `Análise Comparativa das 4 Estratégias no ${mesSelecionado}º Mês`,
+    'Valores nominais projetados conforme parâmetros configurados',
+    true
   );
 
   const boxW2 = (contentWidth - 4) / 2;
-  const boxH2 = 44;
+  const boxH2 = 36.5;
+  const rowStep = 4.3;
 
   // Quadrante 1: Venda Contemplada (Alavancagem Financeira)
   doc.setFillColor(252, 252, 254);
-  doc.setDrawColor(reguaAtiva === 'venda' ? 196 : 220, reguaAtiva === 'venda' ? 148 : 224, reguaAtiva === 'venda' ? 35 : 232);
+  doc.setDrawColor(
+    reguaAtiva === 'venda' ? 196 : 220,
+    reguaAtiva === 'venda' ? 148 : 224,
+    reguaAtiva === 'venda' ? 35 : 232
+  );
   doc.setLineWidth(reguaAtiva === 'venda' ? 0.55 : 0.3);
-  doc.roundedRect(14, y, boxW2, boxH2, 2.5, 2.5, 'FD');
+  doc.roundedRect(14, y, boxW2, boxH2, 2.2, 2.2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
   doc.setTextColor(138, 100, 20);
-  doc.text('A) VENDA CONTEMPLADA (GIRO DE ÁGIO)', 18, y + 6.5);
+  doc.text('A) VENDA CONTEMPLADA (GIRO DE ÁGIO)', 18, y + 5.8);
 
   const linhasA: [string, string][] = [
     ['Crédito Corrigido no Mês:', formatarMoeda(res.creditoCorrigido)],
     ['Total Investido (Meia Parcela):', formatarMoeda(res.totalInvestido)],
-    [
-      `Valor de Venda do Ágio (${formatarPercentual(
-        premissas.agioVenda * 100,
-        0
-      )}):`,
-      formatarMoeda(res.valorVenda),
-    ],
+    [`Valor de Venda do Ágio (${agioPctFmt}):`, formatarMoeda(res.valorVenda)],
     ['Lucro Líquido da Venda:', formatarMoeda(res.lucro)],
     [
       'Rentabilidade Total / Média Mês:',
@@ -628,9 +684,9 @@ export async function gerarPropostaPdf(
   ];
 
   linhasA.forEach(([k, v], i) => {
-    const ly = y + 13 + i * 5.2;
+    const ly = y + 11.4 + i * rowStep;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.6);
+    doc.setFontSize(7.3);
     doc.setTextColor(90, 95, 110);
     doc.text(k, 18, ly);
     doc.setFont('helvetica', 'bold');
@@ -647,15 +703,18 @@ export async function gerarPropostaPdf(
     reguaAtiva === 'patrimonial' ? 35 : 232
   );
   doc.setLineWidth(reguaAtiva === 'patrimonial' ? 0.55 : 0.3);
-  doc.roundedRect(q2X, y, boxW2, boxH2, 2.5, 2.5, 'FD');
+  doc.roundedRect(q2X, y, boxW2, boxH2, 2.2, 2.2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
   doc.setTextColor(138, 100, 20);
-  doc.text('B) ALAVANCAGEM PATRIMONIAL & RENDA PASSIVA', q2X + 4, y + 6.5);
+  doc.text('B) ALAVANCAGEM PATRIMONIAL & RENDA PASSIVA', q2X + 4, y + 5.8);
 
   const linhasB: [string, string][] = [
-    ['Crédito p/ Aquisição do Imóvel:', formatarMoeda(patrimonialCalc.creditoDisponivel)],
+    [
+      'Crédito p/ Aquisição do Imóvel:',
+      formatarMoeda(patrimonialCalc.creditoDisponivel),
+    ],
     [
       'Investido do Bolso (Alavancagem):',
       `${formatarMoeda(patrimonialCalc.totalInvestidoAteContemplacao)} (${
@@ -683,9 +742,9 @@ export async function gerarPropostaPdf(
   ];
 
   linhasB.forEach(([k, v], i) => {
-    const ly = y + 13 + i * 5.2;
+    const ly = y + 11.4 + i * rowStep;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.6);
+    doc.setFontSize(7.3);
     doc.setTextColor(90, 95, 110);
     doc.text(k, q2X + 4, ly);
     doc.setFont('helvetica', 'bold');
@@ -693,7 +752,7 @@ export async function gerarPropostaPdf(
     doc.text(v, q2X + boxW2 - 4, ly, { align: 'right' });
   });
 
-  y += boxH2 + 4;
+  y += boxH2 + (isResumido1Pagina ? 2.8 : 3.5);
 
   // Quadrante 3: Carta Contemplada Aplicada (14,31% ao ano)
   doc.setFillColor(252, 252, 254);
@@ -703,19 +762,22 @@ export async function gerarPropostaPdf(
     reguaAtiva === 'aplicada' ? 35 : 232
   );
   doc.setLineWidth(reguaAtiva === 'aplicada' ? 0.55 : 0.3);
-  doc.roundedRect(14, y, boxW2, boxH2, 2.5, 2.5, 'FD');
+  doc.roundedRect(14, y, boxW2, boxH2, 2.2, 2.2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
   doc.setTextColor(138, 100, 20);
   doc.text(
     `C) CONTEMPLADA APLICADA (${formatarPercentual(rentAnualPct, 2)} AO ANO)`,
     18,
-    y + 6.5
+    y + 5.8
   );
 
   const linhasC: [string, string][] = [
-    [`Crédito Aplicado no ${mesSelecionado}º Mês:`, formatarMoeda(res.creditoCorrigido)],
+    [
+      `Crédito Aplicado no ${mesSelecionado}º Mês:`,
+      formatarMoeda(res.creditoCorrigido),
+    ],
     [
       'Taxa de Rendimento da Aplicação:',
       `${formatarPercentual(rentAnualPct, 2)} a.a. (${formatarPercentual(
@@ -742,9 +804,9 @@ export async function gerarPropostaPdf(
   ];
 
   linhasC.forEach(([k, v], i) => {
-    const ly = y + 13 + i * 5.2;
+    const ly = y + 11.4 + i * rowStep;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.6);
+    doc.setFontSize(7.3);
     doc.setTextColor(90, 95, 110);
     doc.text(k, 18, ly);
     doc.setFont('helvetica', 'bold');
@@ -760,15 +822,18 @@ export async function gerarPropostaPdf(
     reguaAtiva === 'renda_fixa' ? 35 : 232
   );
   doc.setLineWidth(reguaAtiva === 'renda_fixa' ? 0.55 : 0.3);
-  doc.roundedRect(q2X, y, boxW2, boxH2, 2.5, 2.5, 'FD');
+  doc.roundedRect(q2X, y, boxW2, boxH2, 2.2, 2.2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
+  doc.setFontSize(8.1);
   doc.setTextColor(138, 100, 20);
-  doc.text('D) CONSÓRCIO VS. POUPAR NA RENDA FIXA', q2X + 4, y + 6.5);
+  doc.text('D) CONSÓRCIO VS. POUPAR NA RENDA FIXA', q2X + 4, y + 5.8);
 
   const linhasD: [string, string][] = [
-    ['Aporte Mensal Equivalente:', formatarMoeda(res.rendaFixa.parcelaMensalAtual)],
+    [
+      'Aporte Mensal Equivalente:',
+      formatarMoeda(res.rendaFixa.parcelaMensalAtual),
+    ],
     ['Total Depositado no Período:', formatarMoeda(res.totalInvestido)],
     [
       'Juros Acumulados na Renda Fixa:',
@@ -791,9 +856,9 @@ export async function gerarPropostaPdf(
   ];
 
   linhasD.forEach(([k, v], i) => {
-    const ly = y + 13 + i * 5.2;
+    const ly = y + 11.4 + i * rowStep;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.6);
+    doc.setFontSize(7.3);
     doc.setTextColor(90, 95, 110);
     doc.text(k, q2X + 4, ly);
     doc.setFont('helvetica', 'bold');
@@ -801,33 +866,24 @@ export async function gerarPropostaPdf(
     doc.text(v, q2X + boxW2 - 4, ly, { align: 'right' });
   });
 
-  y += boxH2 + 5.5;
+  y += boxH2 + 3.2;
 
   // -------------------------------------------------------------------------
   // SEÇÃO 4: TABELA DE EVOLUÇÃO POR MARCOS DE CONTEMPLAÇÃO (CRONOGRAMA)
   // -------------------------------------------------------------------------
-  if (y > 218) {
-    doc.addPage();
-    desenharCabecalhoPagina(
-      doc,
-      logoData,
-      opcoes,
-      dataHoraStr,
-      'Cronograma de Evolução por Marcos & Aceleração Fidelidade'
-    );
-    y = 41;
-  }
-
   y = desenharTituloSecao(
     doc,
     y,
     '4',
     'Evolução da Cota por Marcos de Contemplação',
-    'Comparativo do retorno financeiro conforme o mês em que ocorrer a contemplação'
+    'Comparativo do retorno financeiro conforme o mês em que ocorrer a contemplação',
+    true
   );
 
   // Gera lista de meses-marco garantindo que o mês selecionado pelo usuário esteja presente e destacado
-  const marcosBase = [1, 6, 12, 18, 24, 36, 48, 72, 120];
+  const marcosBase = isResumido1Pagina
+    ? [1, 12, 24, 36, 72]
+    : [1, 6, 12, 24, 36, 48, 72];
   const marcosValidos = Array.from(
     new Set(
       [...marcosBase, mesSelecionado].filter(
@@ -836,12 +892,18 @@ export async function gerarPropostaPdf(
     )
   ).sort((a, b) => a - b);
 
-  // Limita a 8 linhas para caber perfeitamente na primeira página se necessário
+  const maxLinhas = isResumido1Pagina ? 5 : 6;
   const marcosExibidos =
-    marcosValidos.length > 8
-      ? marcosValidos.filter(
-          (m) => m === mesSelecionado || [1, 6, 12, 24, 36, 48, 72].includes(m)
-        )
+    marcosValidos.length > maxLinhas
+      ? marcosValidos
+          .filter(
+            (m) =>
+              m === mesSelecionado ||
+              (isResumido1Pagina
+                ? [1, 12, 24, 72].includes(m)
+                : [1, 12, 24, 36, 72].includes(m))
+          )
+          .slice(0, maxLinhas)
       : marcosValidos;
 
   // Cabeçalho da Tabela
@@ -851,30 +913,34 @@ export async function gerarPropostaPdf(
     'Crédito Corr.',
     'Meia Parc.',
     'Total Invest.',
-    'Lucro Venda',
+    `Lucro (${agioPctFmt})`,
     'Rentab.',
     'Aluguel/Mês',
     'Aplicada Fim',
   ];
 
+  const headerRowH = 5.6;
   doc.setFillColor(22, 24, 32);
-  doc.rect(14, y, contentWidth, 6.8, 'F');
+  doc.rect(14, y, contentWidth, headerRowH, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.1);
+  doc.setFontSize(6.9);
   doc.setTextColor(243, 198, 83);
 
   let cx = 14;
   colHeaders.forEach((h, idx) => {
-    doc.text(h, cx + colWidths[idx] / 2, y + 4.6, { align: 'center' });
+    doc.text(h, cx + colWidths[idx] / 2, y + headerRowH - 1.7, {
+      align: 'center',
+    });
     cx += colWidths[idx];
   });
 
-  y += 6.8;
+  y += headerRowH;
+
+  const dataRowH = 4.9;
 
   marcosExibidos.forEach((m, rowIdx) => {
     const rMes = m === mesSelecionado ? res : simularMes(m, premissas);
     const isSelected = m === mesSelecionado;
-    const rowH = 5.8;
 
     if (isSelected) {
       doc.setFillColor(253, 243, 215);
@@ -883,14 +949,14 @@ export async function gerarPropostaPdf(
     } else {
       doc.setFillColor(255, 255, 255);
     }
-    doc.rect(14, y, contentWidth, rowH, 'F');
+    doc.rect(14, y, contentWidth, dataRowH, 'F');
 
     doc.setDrawColor(230, 233, 240);
     doc.setLineWidth(0.2);
-    doc.line(14, y + rowH, 14 + contentWidth, y + rowH);
+    doc.line(14, y + dataRowH, 14 + contentWidth, y + dataRowH);
 
     doc.setFont('helvetica', isSelected ? 'bold' : 'normal');
-    doc.setFontSize(7.1);
+    doc.setFontSize(6.9);
     doc.setTextColor(
       isSelected ? 138 : 35,
       isSelected ? 95 : 40,
@@ -910,16 +976,18 @@ export async function gerarPropostaPdf(
 
     let rcx = 14;
     vals.forEach((v, idx) => {
-      doc.text(v, rcx + colWidths[idx] / 2, y + 4.1, { align: 'center' });
+      doc.text(v, rcx + colWidths[idx] / 2, y + dataRowH - 1.4, {
+        align: 'center',
+      });
       rcx += colWidths[idx];
     });
 
-    y += rowH;
+    y += dataRowH;
   });
 
-  // Se for relatório completo ou se a régua ativa for fidelidade, adiciona resumo das 6 modalidades
-  if (modoRelatorio === 'completo' || reguaAtiva === 'fidelidade') {
-    if (y > 240) {
+  // Se for Dossiê Completo (modoRelatorio === 'completo'), adiciona a Seção 5 de Modalidades Fidelidade
+  if (modoRelatorio === 'completo') {
+    if (y > 236) {
       doc.addPage();
       desenharCabecalhoPagina(
         doc,
@@ -928,9 +996,9 @@ export async function gerarPropostaPdf(
         dataHoraStr,
         'Modalidades de Aceleração de Contemplação & Carteira Multi-Cotas'
       );
-      y = 41;
+      y = 39;
     } else {
-      y += 4.5;
+      y += 4;
     }
 
     y = desenharTituloSecao(
@@ -944,7 +1012,7 @@ export async function gerarPropostaPdf(
     );
 
     const modW = (contentWidth - 6) / 3;
-    const modH = 14.5;
+    const modH = 14;
 
     fidelidadeCalc.modalidades.forEach((mod, idx) => {
       const col = idx % 3;
@@ -963,31 +1031,35 @@ export async function gerarPropostaPdf(
       doc.roundedRect(mx, my, modW, modH, 2, 2, 'FD');
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.3);
-      doc.setTextColor(mod.ativa ? 20 : 90, mod.ativa ? 95 : 95, mod.ativa ? 55 : 110);
-      doc.text(mod.nome, mx + 3, my + 5);
+      doc.setFontSize(7.2);
+      doc.setTextColor(
+        mod.ativa ? 20 : 90,
+        mod.ativa ? 95 : 95,
+        mod.ativa ? 55 : 110
+      );
+      doc.text(mod.nome, mx + 3, my + 4.8);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.5);
+      doc.setFontSize(6.4);
       doc.text(
         mod.ativa ? 'HABILITADO' : `A partir do ${mod.mesMinimo}º mês`,
         mx + modW - 3,
-        my + 5,
+        my + 4.8,
         { align: 'right' }
       );
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.6);
+      doc.setFontSize(6.5);
       doc.setTextColor(95, 100, 115);
       doc.text(
         `Concorrência: ~${mod.concorrenciaEstimadaPct}% do grupo (~${mod.contemplacoesMesEstimadas} contempl./mês)`,
         mx + 3,
-        my + 10.8
+        my + 10.4
       );
     });
   }
 
-  // Rodapé em todas as páginas
+  // Rodapé em todas as páginas (com "Imagem meramente ilustrativa.")
   desenharRodapePaginas(doc, opcoes);
 
   // Nome amigável do arquivo PDF

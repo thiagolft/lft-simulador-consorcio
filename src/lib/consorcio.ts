@@ -134,6 +134,44 @@ export interface ResultadoSimulacaoMes {
   aplicada: ResultadoContempladaAplicada;
 }
 
+export interface ItemTabelaImovelHS {
+  descricao: string;
+  credito: number;
+  prazo: number;
+  parcelaIntegral: number;
+  meiaParcela: number;
+}
+
+export const TABELA_IMOVEL_HS: ItemTabelaImovelHS[] = [
+  { descricao: 'IMÓVEL HS 100', credito: 100000, prazo: 180, parcelaIntegral: 683.20, meiaParcela: 341.50 },
+  { descricao: 'IMÓVEL HS 120', credito: 120000, prazo: 180, parcelaIntegral: 819.84, meiaParcela: 409.80 },
+  { descricao: 'IMÓVEL HS 150', credito: 150000, prazo: 180, parcelaIntegral: 1024.80, meiaParcela: 512.25 },
+  { descricao: 'IMÓVEL HS 180', credito: 180000, prazo: 180, parcelaIntegral: 1229.76, meiaParcela: 614.70 },
+  { descricao: 'IMÓVEL HS 200', credito: 200000, prazo: 200, parcelaIntegral: 1230.00, meiaParcela: 615.00 },
+  { descricao: 'IMÓVEL HS 250', credito: 250000, prazo: 200, parcelaIntegral: 1537.50, meiaParcela: 768.75 },
+  { descricao: 'IMÓVEL HS 300', credito: 300000, prazo: 200, parcelaIntegral: 1845.00, meiaParcela: 922.50 },
+  { descricao: 'IMÓVEL HS 350', credito: 350000, prazo: 200, parcelaIntegral: 2152.50, meiaParcela: 1076.25 },
+  { descricao: 'IMÓVEL HS 400', credito: 400000, prazo: 200, parcelaIntegral: 2460.00, meiaParcela: 1230.00 },
+  { descricao: 'IMÓVEL HS 500', credito: 500000, prazo: 220, parcelaIntegral: 2795.00, meiaParcela: 1397.50 },
+  { descricao: 'IMÓVEL HS 600', credito: 600000, prazo: 220, parcelaIntegral: 3354.00, meiaParcela: 1677.00 },
+  { descricao: 'IMÓVEL HS 700', credito: 700000, prazo: 220, parcelaIntegral: 3913.00, meiaParcela: 1956.50 },
+  { descricao: 'IMÓVEL HS 800', credito: 800000, prazo: 220, parcelaIntegral: 4472.00, meiaParcela: 2236.00 },
+  { descricao: 'IMÓVEL HS 900', credito: 900000, prazo: 220, parcelaIntegral: 5031.00, meiaParcela: 2515.50 },
+  { descricao: 'IMÓVEL HS 1000', credito: 1000000, prazo: 220, parcelaIntegral: 5590.90, meiaParcela: 2795.00 },
+  { descricao: 'IMÓVEL HS 1100', credito: 1100000, prazo: 220, parcelaIntegral: 6149.00, meiaParcela: 3074.50 },
+];
+
+export function obterItemTabelaHS(
+  credito: number,
+  prazo?: number
+): ItemTabelaImovelHS | undefined {
+  return TABELA_IMOVEL_HS.find(
+    (item) =>
+      Math.abs(item.credito - credito) < 0.01 &&
+      (prazo === undefined || item.prazo === prazo)
+  );
+}
+
 export const PREMISSAS_PADRAO: PremissasConsorcio = {
   creditoInicial: 500000,
   prazo: 220,
@@ -187,28 +225,46 @@ export function calcularCreditoCorrigido(
 
 /**
  * Calcula a parcela cheia no mês M.
- * Fórmula: parcelaCheia(M) = creditoCorrigido(M) * (1 + taxaTotal) / prazo
+ * Se o crédito/prazo constar na TABELA_IMOVEL_HS (com taxa padrão), utiliza a Parcela Integral oficial da tabela corrigida anualmente.
+ * Caso contrário, utiliza a fórmula: parcelaCheia(M) = creditoCorrigido(M) * (1 + taxaTotal) / prazo
  */
 export function calcularParcelaCheia(
   mes: number,
   premissas: PremissasConsorcio = PREMISSAS_PADRAO
 ): number {
-  const creditoCorrigido = calcularCreditoCorrigido(
-    mes,
-    premissas.creditoInicial,
-    premissas.reajusteAnual
-  );
+  const anos = calcularAnosReajuste(mes);
+  const fatorCorrecao = Math.pow(1 + premissas.reajusteAnual, anos);
+  const itemHS = obterItemTabelaHS(premissas.creditoInicial, premissas.prazo);
+
+  if (itemHS && Math.abs(premissas.taxaTotal - PREMISSAS_PADRAO.taxaTotal) < 1e-6) {
+    return itemHS.parcelaIntegral * fatorCorrecao;
+  }
+
+  const creditoCorrigido = premissas.creditoInicial * fatorCorrecao;
   return (creditoCorrigido * (1 + premissas.taxaTotal)) / premissas.prazo;
 }
 
 /**
  * Calcula a meia parcela (ou percentual reduzido configurado) no mês M.
- * Fórmula: meiaParcela(M) = parcelaCheia(M) * percentualMeiaParcela (padrão 50% = / 2)
+ * Se o crédito/prazo constar na TABELA_IMOVEL_HS (com taxa e percentual de 50% padrão), utiliza a 1/2 Parcela oficial da tabela corrigida anualmente.
+ * Caso contrário, utiliza: meiaParcela(M) = parcelaCheia(M) * percentualMeiaParcela
  */
 export function calcularMeiaParcela(
   mes: number,
   premissas: PremissasConsorcio = PREMISSAS_PADRAO
 ): number {
+  const anos = calcularAnosReajuste(mes);
+  const fatorCorrecao = Math.pow(1 + premissas.reajusteAnual, anos);
+  const itemHS = obterItemTabelaHS(premissas.creditoInicial, premissas.prazo);
+
+  if (
+    itemHS &&
+    Math.abs(premissas.taxaTotal - PREMISSAS_PADRAO.taxaTotal) < 1e-6 &&
+    Math.abs(premissas.percentualMeiaParcela - 0.5) < 1e-6
+  ) {
+    return itemHS.meiaParcela * fatorCorrecao;
+  }
+
   return calcularParcelaCheia(mes, premissas) * premissas.percentualMeiaParcela;
 }
 

@@ -18,6 +18,8 @@ import {
   calcularAlavancagemPatrimonial,
   calcularContempladaAplicada,
   calcularModalidadesFidelidade,
+  calcularMeiaParcela,
+  calcularParcelaCheia,
   obterRentabilidadeMensal,
   formatarMoeda,
   formatarPercentual,
@@ -48,6 +50,9 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
     onTogglePremissas,
     onOpenPdfModal,
   }) => {
+    // Estado compartilhado: detalhe da parcela corrigida antes da contemplação
+    const [detalheParcelaAberto, setDetalheParcelaAberto] = useState(false);
+
     // Estados Régua 1 (Venda)
     const [nominalAberto, setNominalAberto] = useState(false);
     const [cetAberto, setCetAberto] = useState(false);
@@ -92,7 +97,16 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
       [reguaAtiva, resultado.mes, numeroCotas, premissas]
     );
 
-    // Anima apenas os 4 valores da aba ativa (evita múltiplos loops de rAF em segundo plano)
+    const meiaParcelaInicial = useMemo(
+      () => round2(calcularMeiaParcela(1, premissas)),
+      [premissas]
+    );
+    const parcelaCheiaInicial = useMemo(
+      () => round2(calcularParcelaCheia(1, premissas)),
+      [premissas]
+    );
+
+    // Anima os valores da aba ativa
     const v1Target =
       reguaAtiva === 'venda'
         ? creditoVendaExibido
@@ -102,9 +116,14 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
         ? fidelidadeCalc.creditoTotalCarteira
         : resultado.creditoCorrigido;
 
-    const v2Target =
+    const vMeiaParcelaTarget =
       reguaAtiva === 'fidelidade' && fidelidadeCalc
         ? fidelidadeCalc.parcelaMensalCarteira
+        : resultado.meiaParcela;
+
+    const v2Target =
+      reguaAtiva === 'fidelidade'
+        ? round2(resultado.totalInvestido * numeroCotas)
         : resultado.totalInvestido;
 
     const v3Target =
@@ -132,16 +151,73 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
         : 0;
 
     const anim1 = useAnimatedNumber(v1Target, 150);
+    const animMeiaParcela = useAnimatedNumber(vMeiaParcelaTarget, 150);
     const anim2 = useAnimatedNumber(v2Target, 150);
     const anim3 = useAnimatedNumber(v3Target, 150);
     const anim4 = useAnimatedNumber(v4Target, 150);
 
+    const renderPainelDetalheParcela = () => {
+      if (!detalheParcelaAberto) return null;
+      const mult = reguaAtiva === 'fidelidade' ? numeroCotas : 1;
+      return (
+        <div className="mt-4 rounded-xl p-4 border text-xs bg-[#17171c] border-[#d4a52a]/50 text-gray-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-white/10">
+            <span className="font-semibold uppercase tracking-wider text-[#f3c653]">
+              Detalhamento da Parcela Corrigida Antes da Contemplação ({resultado.mes}º Mês
+              {mult > 1 ? ` • ${mult} Cotas` : ''})
+            </span>
+            <span className="text-[11px] text-gray-400">
+              Reajustes anuais aplicados: {resultado.nominal.numeroReajustes} (
+              {formatarPercentual((resultado.nominal.fatorCorrecao - 1) * 100, 1)})
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">
+                1/2 Parcela Inicial (1º ao 12º mês)
+              </div>
+              <div className="text-sm font-bold text-white mt-0.5">
+                {formatarMoeda(round2(meiaParcelaInicial * mult))}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-[#d4a52a]/40">
+              <div className="text-[11px] text-[#f3c653]">
+                Meia Parcela Corrigida ({resultado.mes}º mês)
+              </div>
+              <div className="text-sm font-bold text-[#f3c653] mt-0.5">
+                {formatarMoeda(round2(resultado.meiaParcela * mult))}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">
+                Parcela Integral Corrigida ({resultado.mes}º mês)
+              </div>
+              <div className="text-sm font-bold text-white mt-0.5">
+                {formatarMoeda(round2(resultado.parcelaCheia * mult))}
+                <span className="block text-[10px] font-normal text-gray-400">
+                  Inicial (1º ano): {formatarMoeda(round2(parcelaCheiaInicial * mult))}
+                </span>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">
+                Total Pago até Contemplar ({resultado.mes}x)
+              </div>
+              <div className="text-sm font-bold text-emerald-300 mt-0.5">
+                {formatarMoeda(round2(resultado.totalInvestido * mult))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     return (
       <section
         aria-label="Resultados da simulação"
-        className="w-full max-w-4xl mx-auto px-3 sm:px-6 mt-1 mb-10"
+        className="w-full max-w-5xl mx-auto px-3 sm:px-6 mt-1 mb-10"
       >
-        <div className="relative gold-border-box rounded-2xl px-4 sm:px-7 md:px-10 pt-6 sm:pt-7 pb-11 bg-[#111115]/95">
+        <div className="relative gold-border-box rounded-2xl px-4 sm:px-7 md:px-9 pt-6 sm:pt-7 pb-11 bg-[#111115]/95">
           {/* =========================================================
               RÉGUA 1: VENDA CONTEMPLADA (ALAVANCAGEM FINANCEIRA)
              ========================================================= */}
@@ -151,47 +227,69 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 RESULTADOS
               </h2>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 items-stretch">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 items-stretch">
                 <div className="flex flex-col items-center justify-between h-full">
-                  <span className="text-xs sm:text-sm md:text-base font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Crédito:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium tracking-tight whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium tracking-tight whitespace-nowrap">
                       {formatarMoeda(anim1)}
                     </span>
                   </div>
                 </div>
 
+                {/* Botão Meia Parcela Corrigida antes da contemplação (ao lado depois do Crédito) */}
                 <div className="flex flex-col items-center justify-between h-full">
-                  <span className="text-xs sm:text-sm md:text-base font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                    Meia Parcela Corrigida:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetalheParcelaAberto((p) => !p)}
+                    title="Clique para ver o detalhamento da parcela corrigida antes da contemplação"
+                    className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center gap-1 hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium tracking-tight whitespace-nowrap">
+                      {formatarMoeda(animMeiaParcela)}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#f3c653] shrink-0 transition-transform ${
+                        detalheParcelaAberto ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center justify-between h-full">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Total investido:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium tracking-tight whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium tracking-tight whitespace-nowrap">
                       {formatarMoeda(anim2)}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center justify-between h-full">
-                  <span className="text-xs sm:text-sm md:text-base font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Valor da venda:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium tracking-tight whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium tracking-tight whitespace-nowrap">
                       {formatarMoeda(anim3)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-between h-full">
-                  <span className="text-xs sm:text-sm md:text-base font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                <div className="flex flex-col items-center justify-between h-full col-span-2 sm:col-span-1">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Lucro:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
                     <span
-                      className={`text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium tracking-tight whitespace-nowrap ${
+                      className={`text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium tracking-tight whitespace-nowrap ${
                         lucroVendaExibido >= 0 ? 'text-white' : 'text-red-300'
                       }`}
                     >
@@ -200,6 +298,8 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                   </div>
                 </div>
               </div>
+
+              {renderPainelDetalheParcela()}
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                 <button
@@ -371,16 +471,38 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 items-stretch">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 items-stretch">
                 <div className="flex flex-col items-center justify-between h-full">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Crédito p/ Imóvel:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
                       {formatarMoeda(anim1)}
                     </span>
                   </div>
+                </div>
+
+                {/* Botão Meia Parcela Corrigida antes da contemplação (ao lado depois do Crédito) */}
+                <div className="flex flex-col items-center justify-between h-full">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                    Meia Parcela Corrigida:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetalheParcelaAberto((p) => !p)}
+                    title="Clique para ver o detalhamento da parcela corrigida antes da contemplação"
+                    className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center gap-1 hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
+                      {formatarMoeda(animMeiaParcela)}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#f3c653] shrink-0 transition-transform ${
+                        detalheParcelaAberto ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 <div className="flex flex-col items-center justify-between h-full">
@@ -388,7 +510,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                     Investido (Do Bolso):
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
                       {formatarMoeda(anim2)}
                     </span>
                   </div>
@@ -399,23 +521,25 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                     Aluguel ({formatarPercentual(obterRentabilidadeMensal(premissas) * 100, 4)}):
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-emerald-300 text-sm sm:text-base md:text-[15px] lg:text-[17px] font-semibold whitespace-nowrap">
+                    <span className="text-emerald-300 text-sm sm:text-base md:text-[15px] lg:text-[16px] font-semibold whitespace-nowrap">
                       {formatarMoeda(anim3)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-between h-full">
+                <div className="flex flex-col items-center justify-between h-full col-span-2 sm:col-span-1">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Parcela Pós-Contemplar:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
                       {formatarMoeda(anim4)}
                     </span>
                   </div>
                 </div>
               </div>
+
+              {renderPainelDetalheParcela()}
 
               <div className="mt-5 p-4 rounded-xl bg-black/35 border border-[#8a6414]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
@@ -519,27 +643,42 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-stretch">
                   <div className="flex flex-col justify-between h-full">
-                    <span className="text-xs text-gray-300 block mb-1.5">Parcela Mensal Atual:</span>
-                    <div className="gold-pill h-11 px-3 rounded-xl flex items-center justify-center text-white font-medium">
-                      {formatarMoeda(resultado.rendaFixa.parcelaMensalAtual)}
+                    <span className="text-xs text-gray-300 block mb-1.5">Crédito Corrigido Disponível:</span>
+                    <div className="gold-pill h-11 px-3 rounded-xl flex items-center justify-center text-[#f3c653] font-bold">
+                      {formatarMoeda(anim1)}
                     </div>
                   </div>
+
+                  {/* Botão Meia Parcela Corrigida antes da contemplação (ao lado depois do Crédito) */}
+                  <div className="flex flex-col justify-between h-full">
+                    <span className="text-xs text-gray-300 block mb-1.5">Meia Parcela Corrigida:</span>
+                    <button
+                      type="button"
+                      onClick={() => setDetalheParcelaAberto((p) => !p)}
+                      title="Clique para ver o detalhamento da parcela corrigida antes da contemplação"
+                      className="gold-pill h-11 px-3 rounded-xl flex items-center justify-center gap-1.5 text-white font-medium hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                    >
+                      <span>{formatarMoeda(animMeiaParcela)}</span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-[#f3c653] shrink-0 transition-transform ${
+                          detalheParcelaAberto ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+
                   <div className="flex flex-col justify-between h-full">
                     <span className="text-xs text-gray-300 block mb-1.5">Total Desembolsado:</span>
                     <div className="gold-pill h-11 px-3 rounded-xl flex items-center justify-center text-white font-medium">
                       {formatarMoeda(anim2)}
                     </div>
                   </div>
-                  <div className="flex flex-col justify-between h-full">
-                    <span className="text-xs text-gray-300 block mb-1.5">Crédito Corrigido Disponível:</span>
-                    <div className="gold-pill h-11 px-3 rounded-xl flex items-center justify-center text-[#f3c653] font-bold">
-                      {formatarMoeda(anim1)}
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
+              {renderPainelDetalheParcela()}
+
+              <div className="mt-4 p-4 rounded-xl bg-black/30 border border-white/10">
                 <div className="text-xs font-bold uppercase tracking-wider text-gray-300 mb-3 flex items-center justify-between">
                   <span>
                     2. Linha da Renda Fixa ({formatarPercentual((premissas.rentabilidadeAnual ?? 0.1431) * 100, 2)} a.a. / {formatarPercentual(obterRentabilidadeMensal(premissas) * 100, 4)} a.m.)
@@ -613,16 +752,38 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 items-stretch">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 items-stretch">
                 <div className="flex flex-col items-center justify-between h-full">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Crédito no {resultado.mes}º Mês:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
                       {formatarMoeda(anim1)}
                     </span>
                   </div>
+                </div>
+
+                {/* Botão Meia Parcela Corrigida antes da contemplação (ao lado depois do Crédito) */}
+                <div className="flex flex-col items-center justify-between h-full">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                    Meia Parcela Corrigida:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetalheParcelaAberto((p) => !p)}
+                    title="Clique para ver o detalhamento da parcela corrigida antes da contemplação"
+                    className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center gap-1 hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
+                      {formatarMoeda(animMeiaParcela)}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#f3c653] shrink-0 transition-transform ${
+                        detalheParcelaAberto ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
                 </div>
 
                 <div className="flex flex-col items-center justify-between h-full">
@@ -630,7 +791,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                     Investido até Contemplar:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[17px] font-medium whitespace-nowrap">
+                    <span className="text-white text-sm sm:text-base md:text-[15px] lg:text-[16px] font-medium whitespace-nowrap">
                       {formatarMoeda(anim2)}
                     </span>
                   </div>
@@ -641,23 +802,25 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                     Após {aplicadaCalc.mesesAplicado} Meses Aplicado:
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-[#f3c653] text-sm sm:text-base md:text-[15px] lg:text-[17px] font-bold whitespace-nowrap">
+                    <span className="text-[#f3c653] text-sm sm:text-base md:text-[15px] lg:text-[16px] font-bold whitespace-nowrap">
                       {formatarMoeda(anim3)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-between h-full">
+                <div className="flex flex-col items-center justify-between h-full col-span-2 sm:col-span-1">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     No Fim do Grupo ({premissas.prazo}m):
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
-                    <span className="text-emerald-300 text-sm sm:text-base md:text-[15px] lg:text-[17px] font-bold whitespace-nowrap">
+                    <span className="text-emerald-300 text-sm sm:text-base md:text-[15px] lg:text-[16px] font-bold whitespace-nowrap">
                       {formatarMoeda(anim4)}
                     </span>
                   </div>
                 </div>
               </div>
+
+              {renderPainelDetalheParcela()}
 
               <div className="mt-5 p-4 rounded-xl bg-black/30 border border-[#8a6414]/40 flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -723,7 +886,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10 text-xs items-stretch">
                   <div className="p-3 rounded-lg bg-black/25 border border-white/5 flex flex-col justify-between">
-                    <span className="text-gray-400">Custo Total 220 Parcelas (Corrigidas):</span>
+                    <span className="text-gray-400">Custo Total {premissas.prazo} Parcelas (Corrigidas):</span>
                     <div className="text-sm font-bold text-white mt-1">
                       {formatarMoeda(aplicadaCalc.custoTotalParcelas220Meses)}
                     </div>
@@ -779,7 +942,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 ))}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 items-stretch">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 mb-4 items-stretch">
                 <div className="flex flex-col items-center justify-between h-full">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Crédito Total ({numeroCotas}x):
@@ -791,13 +954,35 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                   </div>
                 </div>
 
+                {/* Botão Meia Parcela Corrigida antes da contemplação (ao lado depois do Crédito) */}
                 <div className="flex flex-col items-center justify-between h-full">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
-                    Meia Parcela Total:
+                    Meia Parcela Corrigida:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDetalheParcelaAberto((p) => !p)}
+                    title="Clique para ver o detalhamento da parcela corrigida antes da contemplação"
+                    className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center gap-1 hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                  >
+                    <span className="text-white text-sm sm:text-base font-medium whitespace-nowrap">
+                      {formatarMoeda(animMeiaParcela)}/mês
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#f3c653] shrink-0 transition-transform ${
+                        detalheParcelaAberto ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center justify-between h-full">
+                  <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
+                    Total Investido ({numeroCotas}x):
                   </span>
                   <div className="gold-pill w-full h-12 sm:h-[52px] px-2 sm:px-3 rounded-2xl flex items-center justify-center">
                     <span className="text-white text-sm sm:text-base font-medium whitespace-nowrap">
-                      {formatarMoeda(anim2)}/mês
+                      {formatarMoeda(anim2)}
                     </span>
                   </div>
                 </div>
@@ -813,7 +998,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-between h-full">
+                <div className="flex flex-col items-center justify-between h-full col-span-2 sm:col-span-1">
                   <span className="text-xs sm:text-sm font-normal mb-2 text-gray-200 text-center min-h-[2.25rem] flex items-end justify-center leading-snug">
                     Chances na Assembleia:
                   </span>
@@ -825,7 +1010,9 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {renderPainelDetalheParcela()}
+
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {fidelidadeCalc.modalidades.map((mod) => (
                   <div
                     key={mod.id}

@@ -5,6 +5,7 @@ import {
   TipoRegua,
   calcularModalidadesFidelidade,
   formatarPercentual,
+  obterItemTabelaHS,
   simularMes,
 } from './lib/consorcio';
 import { DarkGradientBg } from '@/components/ui/elegant-dark-pattern';
@@ -43,9 +44,11 @@ export function App() {
   );
 
   const handleChangeCredito = (novoCredito: number) => {
+    const itemHS = obterItemTabelaHS(novoCredito);
     setPremissas((prev) => ({
       ...prev,
       creditoInicial: novoCredito,
+      ...(itemHS ? { prazo: itemHS.prazo } : {}),
     }));
   };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { SlidersHorizontal, RotateCcw, ChevronDown } from 'lucide-react';
-import { PremissasConsorcio, PREMISSAS_PADRAO } from '../lib/consorcio';
+import { PremissasConsorcio, PREMISSAS_PADRAO, obterItemTabelaHS } from '../lib/consorcio';
 
 interface PremissasPanelProps {
   premissas: PremissasConsorcio;
@@ -90,7 +90,12 @@ export const PremissasPanel: React.FC<PremissasPanelProps> = ({
                 value={premissas.creditoInicial}
                 onChange={(e) => {
                   const val = Math.max(1000, Number(e.target.value) || 0);
-                  atualizarCampo('creditoInicial', val);
+                  const itemHS = obterItemTabelaHS(val);
+                  onChangePremissas({
+                    ...premissas,
+                    creditoInicial: val,
+                    ...(itemHS ? { prazo: itemHS.prazo } : {}),
+                  });
                 }}
                 className="w-full rounded-lg px-3.5 py-2 text-sm font-semibold border bg-[#1c1c22] border-white/15 text-white focus:outline-none focus:border-[#d4a52a]"
               />

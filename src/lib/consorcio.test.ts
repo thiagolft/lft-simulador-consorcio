@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   PREMISSAS_PADRAO,
+  TABELA_IMOVEL_HS,
   calcularAnosReajuste,
   calcularCreditoCorrigido,
   calcularMeiaParcela,
+  calcularParcelaCheia,
   calcularTotalInvestido,
   calcularDetalhamentoNominal,
   calcularCET,
@@ -18,16 +20,34 @@ import {
 } from './consorcio';
 
 describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
-  describe('Régua 1: Teste de calibração (Mês 1, Crédito R$ 500.000, Ágio padrão 25,0%)', () => {
+  describe('Tabela IMÓVEL HS (100 a 1100)', () => {
+    it('deve conter os 16 planos oficiais com os valores exatos de Crédito, Prazo, Parcela Integral e 1/2 Parcela', () => {
+      expect(TABELA_IMOVEL_HS).toHaveLength(16);
+
+      for (const item of TABELA_IMOVEL_HS) {
+        const premissasPlano = {
+          ...PREMISSAS_PADRAO,
+          creditoInicial: item.credito,
+          prazo: item.prazo,
+        };
+        expect(round2(calcularParcelaCheia(1, premissasPlano))).toBe(item.parcelaIntegral);
+        expect(round2(calcularMeiaParcela(1, premissasPlano))).toBe(item.meiaParcela);
+      }
+    });
+  });
+
+  describe('Régua 1: Teste de calibração (Mês 1, Crédito R$ 500.000 - IMÓVEL HS 500, Ágio padrão 25,0%)', () => {
     it('deve reproduzir exatamente os valores de referência no mês 1 com premissas padrão (ágio 25,0%)', () => {
       const resultado = simularMes(1, PREMISSAS_PADRAO);
 
       expect(PREMISSAS_PADRAO.agioVenda).toBe(0.25);
       expect(resultado.creditoCorrigido).toBe(500000.0);
-      expect(resultado.totalInvestido).toBe(1397.73);
+      expect(resultado.parcelaCheia).toBe(2795.0);
+      expect(resultado.meiaParcela).toBe(1397.5);
+      expect(resultado.totalInvestido).toBe(1397.5);
       expect(resultado.valorVenda).toBe(125000.0);
-      expect(resultado.lucro).toBe(123602.27);
-      expect(resultado.rentabilidade).toBe(8843.07);
+      expect(resultado.lucro).toBe(123602.5);
+      expect(resultado.rentabilidade).toBe(8844.54);
     });
   });
 
@@ -51,13 +71,13 @@ describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
       expect(round2(calcularCreditoCorrigido(25, 500000, 0.05))).toBe(551250);
     });
 
-    it('deve acumular R$ 34.384,09 ao final do 2º ano (mês 24) e R$ 52.876,02 no 3º ano (mês 36)', () => {
-      expect(calcularTotalInvestido(24, PREMISSAS_PADRAO)).toBe(34384.09);
-      expect(calcularTotalInvestido(36, PREMISSAS_PADRAO)).toBe(52876.02);
+    it('deve acumular R$ 34.378,50 ao final do 2º ano (mês 24) e R$ 52.867,43 no 3º ano (mês 36)', () => {
+      expect(calcularTotalInvestido(24, PREMISSAS_PADRAO)).toBe(34378.5);
+      expect(calcularTotalInvestido(36, PREMISSAS_PADRAO)).toBe(52867.43);
     });
 
-    it('deve somar R$ 970.624,01 de custo total ao longo dos 220 meses', () => {
-      expect(calcularCustoTotalPlanoCompleto(PREMISSAS_PADRAO)).toBe(970624.01);
+    it('deve somar R$ 970.466,18 de custo total ao longo dos 220 meses', () => {
+      expect(calcularCustoTotalPlanoCompleto(PREMISSAS_PADRAO)).toBe(970466.18);
     });
   });
 
@@ -71,14 +91,14 @@ describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
       const pat25 = calcularAlavancagemPatrimonial(25, PREMISSAS_PADRAO, false);
       expect(pat25.creditoDisponivel).toBe(551250);
       expect(pat25.aluguelMensal).toBe(round2(551250 * 0.011925));
-      expect(pat25.parcelaPosContemplacao).toBe(3292.88);
+      expect(pat25.parcelaPosContemplacao).toBe(3292.91);
     });
 
-    it('deve reproduzir exatamente a parcela de R$ 4.478,00 no mês 69', () => {
+    it('deve reproduzir a parcela pós-contemplação no mês 69', () => {
       const pat69 = calcularAlavancagemPatrimonial(69, PREMISSAS_PADRAO, false);
       expect(pat69.creditoDisponivel).toBe(638140.78);
       expect(pat69.aluguelMensal).toBe(round2(638140.78 * 0.011925));
-      expect(pat69.parcelaPosContemplacao).toBe(4478.0);
+      expect(pat69.parcelaPosContemplacao).toBe(4478.12);
     });
 
     it('deve permitir a flexibilidade de continuar pagando meia parcela pegando meio crédito', () => {
@@ -92,9 +112,9 @@ describe('Simulador LFT Consórcios - Todas as Réguas (consorcio.ts)', () => {
   });
 
   describe('Régua 3: Consórcio vs. Renda Fixa (Combate à Inflação)', () => {
-    it('deve demonstrar no mês 136 que o total depositado é R$ 247.848,92 e o Crédito Corrigido está em R$ 855.169,68', () => {
+    it('deve demonstrar no mês 136 que o total depositado é R$ 247.808,62 e o Crédito Corrigido está em R$ 855.169,68', () => {
       const rf136 = calcularComparativoRendaFixa(136, PREMISSAS_PADRAO);
-      expect(rf136.totalDepositado).toBe(247848.92);
+      expect(rf136.totalDepositado).toBe(247808.62);
       expect(rf136.creditoCorrigidoConsorcio).toBe(855169.68);
       expect(rf136.montanteRendaFixa).toBeGreaterThan(500000);
       expect(rf136.vantagemConsorcio).toBeGreaterThan(250000);

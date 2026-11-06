@@ -132,6 +132,7 @@ export interface ResultadoSimulacaoMes {
   patrimonial: ResultadoAlavancagemPatrimonial;
   rendaFixa: ResultadoComparativoRendaFixa;
   aplicada: ResultadoContempladaAplicada;
+  posContemplacao: ResultadoParcelaPosContemplacao;
 }
 
 export interface ItemTabelaImovelHS {
@@ -752,6 +753,46 @@ export function calcularModalidadesFidelidade(
   };
 }
 
+export interface ResultadoParcelaPosContemplacao {
+  mes: number;
+  mesesRestantes: number;
+  /** Soma (parcela cheia − meia parcela) dos meses 1..M: o que deixou de ser pago até contemplar */
+  diferencaNaoPaga: number;
+  /** Parcela cheia corrigida vigente após a contemplação */
+  parcelaCheia: number;
+  /** Parte da diferença rateada em cada parcela restante */
+  acrescimoMensal: number;
+  /** Parcela cheia + acréscimo mensal */
+  parcelaFinal: number;
+}
+
+/**
+ * Regra HS Consórcios: meia parcela até a contemplação. Após contemplar, a parcela
+ * volta a ser cheia e a diferença não paga (cheia − meia nos meses 1..M) é diluída
+ * nas parcelas restantes até o final do grupo.
+ */
+export function calcularParcelaPosContemplacao(
+  mes: number,
+  premissas: PremissasConsorcio = PREMISSAS_PADRAO
+): ResultadoParcelaPosContemplacao {
+  const m = Math.max(1, Math.min(premissas.prazo, Math.floor(mes)));
+  let diferenca = 0;
+  for (let k = 1; k <= m; k++) {
+    diferenca += calcularParcelaCheia(k, premissas) - calcularMeiaParcela(k, premissas);
+  }
+  const mesesRestantes = Math.max(0, premissas.prazo - m);
+  const parcelaCheia = calcularParcelaCheia(Math.min(m + 1, premissas.prazo), premissas);
+  const acrescimoMensal = mesesRestantes > 0 ? diferenca / mesesRestantes : 0;
+  return {
+    mes: m,
+    mesesRestantes,
+    diferencaNaoPaga: round2(diferenca),
+    parcelaCheia: round2(parcelaCheia),
+    acrescimoMensal: round2(acrescimoMensal),
+    parcelaFinal: round2(parcelaCheia + acrescimoMensal),
+  };
+}
+
 /**
  * Simula todos os indicadores para um determinado mês M (1 a prazo).
  */
@@ -793,6 +834,7 @@ export function simularMes(
     patrimonial,
     rendaFixa,
     aplicada,
+    posContemplacao: calcularParcelaPosContemplacao(m, premissas),
   };
 }
 

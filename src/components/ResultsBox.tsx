@@ -212,6 +212,50 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
       );
     };
 
+    const renderParcelaPosContemplacao = () => {
+      const pos = resultado.posContemplacao;
+      const mult = reguaAtiva === 'fidelidade' ? numeroCotas : 1;
+      return (
+        <div className="mt-4 rounded-xl p-4 border text-xs bg-[#17171c] border-[#d4a52a]/50 text-gray-200">
+          <div className="mb-3 pb-2 border-b border-white/10 font-semibold uppercase tracking-wider text-[#f3c653]">
+            Regra HS: meia parcela até a contemplação, parcela cheia + diferença depois
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">Até contemplar (1º ao {pos.mes}º mês)</div>
+              <div className="text-sm font-bold text-white mt-0.5">
+                {formatarMoeda(round2(resultado.meiaParcela * mult))}
+                <span className="block text-[10px] font-normal text-gray-400">meia parcela</span>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">
+                Diferença não paga até o {pos.mes}º mês
+              </div>
+              <div className="text-sm font-bold text-white mt-0.5">
+                {formatarMoeda(round2(pos.diferencaNaoPaga * mult))}
+                <span className="block text-[10px] font-normal text-gray-400">
+                  diluída em {pos.mesesRestantes} parcelas restantes (+{formatarMoeda(round2(pos.acrescimoMensal * mult))}/mês)
+                </span>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
+              <div className="text-[11px] text-gray-400">Parcela cheia após contemplar</div>
+              <div className="text-sm font-bold text-white mt-0.5">
+                {formatarMoeda(round2(pos.parcelaCheia * mult))}
+              </div>
+            </div>
+            <div className="p-2.5 rounded-lg bg-black/30 border border-[#d4a52a]/40">
+              <div className="text-[11px] text-[#f3c653]">Parcela após contemplar (cheia + diferença)</div>
+              <div className="text-sm font-bold text-[#f3c653] mt-0.5">
+                {formatarMoeda(round2(pos.parcelaFinal * mult))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     return (
       <section
         aria-label="Resultados da simulação"
@@ -300,6 +344,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
               </div>
 
               {renderPainelDetalheParcela()}
+              {renderParcelaPosContemplacao()}
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                 <button
@@ -540,6 +585,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
               </div>
 
               {renderPainelDetalheParcela()}
+              {renderParcelaPosContemplacao()}
 
               <div className="mt-5 p-4 rounded-xl bg-black/35 border border-[#8a6414]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
@@ -677,6 +723,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
               </div>
 
               {renderPainelDetalheParcela()}
+              {renderParcelaPosContemplacao()}
 
               <div className="mt-4 p-4 rounded-xl bg-black/30 border border-white/10">
                 <div className="text-xs font-bold uppercase tracking-wider text-gray-300 mb-3 flex items-center justify-between">
@@ -821,6 +868,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
               </div>
 
               {renderPainelDetalheParcela()}
+              {renderParcelaPosContemplacao()}
 
               <div className="mt-5 p-4 rounded-xl bg-black/30 border border-[#8a6414]/40 flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1011,6 +1059,7 @@ export const ResultsBox: React.FC<ResultsBoxProps> = React.memo(
               </div>
 
               {renderPainelDetalheParcela()}
+              {renderParcelaPosContemplacao()}
 
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {fidelidadeCalc.modalidades.map((mod) => (

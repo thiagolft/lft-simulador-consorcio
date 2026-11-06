@@ -3,8 +3,33 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     font-family: 'Montserrat', 'Poppins', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* iOS/iPadOS dá zoom automático em campos com fonte < 16px */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  button, [role='button'], [role='slider'] {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+  }
+  /* Alvos de toque mínimos de 44px em telas sensíveis a toque/caneta */
+  @media (pointer: coarse) {
+    button:not(.no-touch-min) {
+      min-height: 44px;
+    }
   }
 }
 
@@ -31,11 +56,21 @@
 }
 
 /* Range input invisível sobreposto ao slider customizado para acessibilidade total (teclado + touch + mouse) */
-input[type='range'].slider-overlay {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
+.slider-overlay {
+  touch-action: none; /* o arraste horizontal com dedo/Apple Pencil não rola a página */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.slider-overlay:focus-visible {
+  outline: 2px solid #f3c653;
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
+/* Régua de "meses aplicado" (input range nativo) maior para toque */
+input[type='range'] {
+  touch-action: pan-y;
+  min-height: 28px;
 }
 
 input[type='range'].slider-overlay::-webkit-slider-thumb {

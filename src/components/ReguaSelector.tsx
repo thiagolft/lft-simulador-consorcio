@@ -76,7 +76,7 @@ export const ReguaSelector: React.FC<ReguaSelectorProps> = ({
               type="button"
               onClick={() => onSelectRegua(item.id)}
               aria-pressed={ativo}
-              className={`group flex items-center gap-1.5 sm:gap-2 min-h-[38px] sm:min-h-[42px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs md:text-[13px] font-medium transition-all border touch-manipulation ${
+              className={`group flex items-center gap-1.5 sm:gap-2 min-h-[44px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs md:text-[13px] font-medium transition-all border touch-manipulation ${
                 ativo
                   ? 'gold-pill text-white border-[#d4a52a] shadow-[0_0_20px_rgba(212,165,42,0.25)]'
                   : 'bg-[#131318]/85 border-white/10 text-gray-300 hover:border-[#8a6414]/60 hover:text-white active:scale-95'
